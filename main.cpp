@@ -2,6 +2,7 @@
 Autor: Alma Teresa Carpio Revilla
 Matrícula: A01798523
 */
+
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -11,25 +12,26 @@ Matrícula: A01798523
 #include "Serie.h"
 #include "Pelicula.h"
 
+// Función para cargar datos desde un archivo CSV y devolver un vector de punteros a objetos Video
 std::vector<Video*> cargarDatosDesdeCSV(const std::string& archivoCSV) {
-    std::vector<Video*> videos;
-    std::ifstream archivo(archivoCSV);
+    std::vector<Video*> videos; // Vector para almacenar los videos cargados
+    std::ifstream archivo(archivoCSV); // Abrir el archivo CSV
     if (!archivo) {
         std::cerr << "Error al abrir el archivo " << archivoCSV << std::endl;
         return videos;
     }
-
     std::string linea;
     while (std::getline(archivo, linea)) {
+        // Leer una línea del archivo CSV
         std::istringstream iss(linea);
         std::string campo;
         std::vector<std::string> campos;
         while (std::getline(iss, campo, ',')) {
+        // Separar los campos de cada línea por comas y almacenarlos en un vector
             campos.push_back(campo);
         }
-
         Video* video;
-        if (!campos[7].empty()) { // Si el campo "ID del episodio" no está vacío, es una serie
+        if (!campos[7].empty()) { // Si el campo "Id del episodio" no está vacío, es una serie
             Serie* serie = new Serie();
             serie->setIdEpisodio(campos[6]);
             serie->setNombreEpisodio(campos[7]);
@@ -39,7 +41,7 @@ std::vector<Video*> cargarDatosDesdeCSV(const std::string& archivoCSV) {
         } else {
             video = new Pelicula();
         }
-
+        // Establecer los atributos del video
         video->setId(campos[0]);
         video->setNombre(campos[1]);
         video->setDuracion(campos[2]);
@@ -47,118 +49,176 @@ std::vector<Video*> cargarDatosDesdeCSV(const std::string& archivoCSV) {
         video->setCalificacion(campos[4]);
         video->setFechaEstreno(campos[5]);
 
-        videos.push_back(video);
+        videos.push_back(video); // Agregar el video al vector
     }
-
     archivo.close();
-    return videos;
+    return videos;  // Devolver el vector de videos cargados
 }
 
+// Función para filtrar y devolver un vector de punteros a objetos Pelicula
 std::vector<Pelicula*> filtrarPeliculas(const std::vector<Video*>& videos) {
-    std::vector<Pelicula*> peliculas;
+    std::vector<Pelicula*> peliculas;  // Vector para almacenar las películas
     for (const auto& video : videos) {
-        if (!video->esSerie()) {
+        if (!video->esSerie()) { // Verificar si el video no es una serie
             Pelicula* pelicula = dynamic_cast<Pelicula*>(video);
             if (pelicula)
-                peliculas.push_back(pelicula);
+                peliculas.push_back(pelicula); // Agregar la película al vector 
         }
     }
-    return peliculas;
+    return peliculas; // Devolver el vector de películas
 }
-
+// Función para filtrar y devolver un vector de punteros a objetos Serie
 std::vector<Serie*> filtrarSeries(const std::vector<Video*>& videos) {
-    std::vector<Serie*> series;
+    std::vector<Serie*> series; // Crear un vector para almacenar las series filtradas
     for (const auto& video : videos) {
-        if (video->esSerie()) {
-            Serie* serie = dynamic_cast<Serie*>(video);
+        if (video->esSerie()) { // Verificamos si el video es una serie
+            Serie* serie = dynamic_cast<Serie*>(video); // Realizamos un dynamic_cast para convertir el puntero de Video a Serie
             if (serie)
-                series.push_back(serie);
+                series.push_back(serie); // Agregar la serie al vector 
         }
     }
     return series;
 }
 
+//Implementación de la función mostrarVideosConCalificacionMayorOIgual(), opción 1 del menú
 void mostrarVideosConCalificacionMayorOIgual(const std::vector<Video*>& videos, const std::string& calificacion) {
     std::cout << "Videos con calificación mayor o igual a " << calificacion << ":\n";
+    float calificacionNumerica;
+    try {
+        calificacionNumerica = std::stof(calificacion); // Convertir la calificación ingresada de string a float
+    } catch (const std::exception& e) {
+        std::cout << "\nLa calificación ingresada no es un valor numérico válido por lo que será redirigido al menu principal.\n";
+        return;
+    }
+    if (calificacionNumerica < 0 || calificacionNumerica > 7) {
+        std::cout << "\nLa calificación ingresada no está dentro del rango válido (0-7) por lo que será redirigido al menu principal.\n";
+        return;
+    }
+    bool encontrados = false; // Variable para realizar el seguimiento de si se encontraron videos
     for (const auto& video : videos) {
-        if (video->getCalificacion() >= calificacion) {
-            std::cout << "\nID: " << video->getId() << "\nNombre: " << video->getNombre()  << "\nCalificación: " << video->getCalificacion() << "\nGénero: " << video->getGenero() << "\n\n-----------------------------" <<std::endl;
+        float calificacionVideo;
+        try {
+            calificacionVideo = std::stof(video->getCalificacion()); // Obtener la calificación del video y convertirla de string a float
+        } catch (const std::exception& e) {
+            std::cout << "\nError al procesar la calificación de un video por lo que será redirigido al menu principal.\n";
+            continue; // Pasar al siguiente video en caso de error en la conversión
+        } 
+        if (calificacionVideo >= calificacionNumerica) {
+            encontrados = true;
+            std::cout << "\nID: " << video->getId() << "\nNombre: " << video->getNombre() << "\nCalificación: " << video->getCalificacion() << "\nGénero: " << video->getGenero() << "\n\n-----------------------------" << std::endl;
         }
+    }
+    if (!encontrados) {
+        std::cout << "\nNo se encontraron videos con la calificación ingresada por lo que será redirigido al menu principal.\n";
     }
     std::cout << std::endl;
 }
 
+//Implementación de la función mostrarVideosConGenero(), opción 2 del menú
 void mostrarVideosConGenero(const std::vector<Video*>& videos, const std::string& genero) {
+    bool videosEncontrados = false; // Variable para verificar si se encontraron videos
     std::cout << "Videos con género " << genero << ":\n";
     for (const auto& video : videos) {
-        if (video->getGenero().find(genero) != std::string::npos) {
+        if (video->getGenero().find(genero) != std::string::npos) { //Utilizar find para que el usuario pueda escribir un género y no todos los géneros de una serie
+            videosEncontrados = true;
             std::cout << "\nID: " << video->getId() << "\nNombre: " << video->getNombre() << "\nGénero: " << video->getGenero() << "\n\n-----------------------------" << std::endl;
         }
     }
+    if (!videosEncontrados) {
+        std::cout << "\n¡Ups! No se encontraron videos con el género especificado. El género es inválido por lo que será redirigido al menu principal.\n";
+    }
     std::cout << std::endl;
 }
 
-
+//Implementación de la función mostrarEpisodiosDeSerie(), opción 3 del menú
 void mostrarEpisodiosDeSerie(const std::vector<Serie*>& series, const std::string& nombreSerie) {
+    bool serieEncontrada = false; // Variable para verificar si se encontró la serie
     std::cout << "\nEpisodios de la serie " << nombreSerie << ":\n";
+    // Iterar a través de todas las series en el vector de series
     for (const auto& serie : series) {
-        if (serie->getNombre() == nombreSerie) {
+        if (serie->getNombre() == nombreSerie) { // Verificar si el nombre de la serie coincide con el nombre ingresado
+            serieEncontrada = true;
             std::cout << "\nID Episodio: " << serie->getIdEpisodio() << "\nNombre Episodio: " << serie->getNombreEpisodio() << "\nTemporada: " << serie->getTemporada() << "\nNumero de Episodio: " << serie->getNumEpisodio() << "\n\n-----------------------------" <<std::endl;
         }
     }
-    std::cout << std::endl;
-}
-
-void mostrarPeliculasConCalificacionMayor(const std::vector<Pelicula*>& peliculas, const std::string& calificacion) {
-    std::cout << "\nPelículas con calificación mayor a " << calificacion << ":\n";
-    for (const auto& pelicula : peliculas) {
-        if (pelicula->getCalificacion() > calificacion) {
-            std::cout << "\nID: " << pelicula->getId() << "\nNombre: " << pelicula->getNombre() << "\nDuración: " << pelicula->getDuracion() << " min" << "\nGénero: " << pelicula->getGenero() << "\nCalificacion: " << pelicula->getCalificacion()<< "\n\n-----------------------------" <<std::endl;
-        }
+    if (!serieEncontrada) {
+        std::cout << "\nNo se encontró la serie especificada. El nombre es inválido por lo que será redirigido al menu principal.\n";
     }
     std::cout << std::endl;
 }
 
+//Implementación de la función mostrarPeliculasConCalificacionMayor(), opción 4 del menú
+void mostrarPeliculasConCalificacionMayor(const std::vector<Pelicula*>& peliculas, const std::string& calificacion) {
+    float calificacionNumerica;
+    try {
+        calificacionNumerica = std::stof(calificacion); // Convertir la calificación ingresada de string a float
+    } catch (const std::exception& e) {
+        std::cout << "\nLa calificación ingresada no es un valor numérico válido por lo que será redirigido al menu principal.\n";
+        return;
+    }
+    std::cout << "\nPelículas con calificación mayor a " << calificacion << ":\n";
+    bool encontradas = false; // Variable para realizar el seguimiento de si se encontraron películas
+    // Iterar a través de todas las películas en el vector de peliculas
+    for (const auto& pelicula : peliculas) {
+        float calificacionPelicula;
+        try {
+            calificacionPelicula = std::stof(pelicula->getCalificacion()); // Obtener la calificación de la película y convertirla de string a float
+        } catch (const std::exception& e) {
+            std::cout << "\nError al procesar la calificación de una película por lo que será redirigido al menú principal.\n";
+            continue; // Pasar a la siguiente película en caso de error en la conversión
+        }   
+        if (calificacionPelicula > calificacionNumerica) {
+            encontradas = true;
+            std::cout << "\nID: " << pelicula->getId() << "\nNombre: " << pelicula->getNombre() << "\nDuración: " << pelicula->getDuracion() << " min" << "\nGénero: " << pelicula->getGenero() << "\nCalificacion: " << pelicula->getCalificacion() << "\n\n-----------------------------" << std::endl;
+        }
+    }
+    if (!encontradas) {
+        std::cout << "\nNo se encontraron películas con calificación mayor a " << calificacion << " por lo que será redirigido al menu principal.\n";
+    }
+    std::cout << std::endl;
+}
+
+//Implementación de la función calificarVideo(), opción 5 del menú
 void calificarVideo(std::vector<Video*>& videos) {
     std::string nombreVideo;
     std::cout << "Ingrese el nombre de la película o episodio de la serie a calificar: ";
-    std::cin.ignore();
-    std::getline(std::cin, nombreVideo);
+    std::cin.ignore(); //Asegurar que no hay caractéres adicionales
+    std::getline(std::cin, nombreVideo); // Leer el nombre del video
 
     std::string nuevaCalificacion;
     std::cout << "Ingrese la nueva calificación: ";
-    std::cin >> nuevaCalificacion;
+    std::cin >> nuevaCalificacion; // Leer la nueva calificación
 
     for (auto& video : videos) {
-        if (video->getNombre() == nombreVideo) {
-            video->getCalificacion() = nuevaCalificacion;
-            std::cout << "Calificación asignada correctamente.\n";
+        if (video->getNombre() == nombreVideo) { // Verificar si el nombre del video coincide con el nombre ingresado
+            video->getCalificacion() = nuevaCalificacion;  // Asignar la nueva calificación al video
+            std::cout << "\nCalificación asignada correctamente.\n";
             return;
         }
     }
-
-    std::cout << "No se encontró el video especificado.\n";
+    std::cout << "\nNo se encontró el video especificado por lo que se redirigirá al menú principal.\n";
 }
 
+//Implementación de la función calcularPromedioCalificacionSerie(), opción 6 del menú
 void calcularPromedioCalificacionSerie(const std::vector<Serie*>& series, const std::string& nombreSerie) {
     int totalEpisodios = 0;
     float totalCalificaciones = 0;
-
+    // Recorrer todas las series
     for (const auto& serie : series) {
-        if (serie->getNombre() == nombreSerie) {
-            totalEpisodios++;
+        if (serie->getNombre() == nombreSerie) { // Verificar si el nombre de la serie coincide con el nombre ingresado
+            totalEpisodios++; // Incrementar el contador de episodios de la serie
             totalCalificaciones += std::stof(serie->getCalificacion());
         }
     }
-
-    if (totalEpisodios > 0) {
-        float promedio = static_cast<float>(totalCalificaciones) / totalEpisodios;
+    if (totalEpisodios > 0) { // Verificar si se encontraron episodios de la serie
+        float promedio = static_cast<float>(totalCalificaciones) / totalEpisodios; // Calcular el promedio de calificación
         std::cout << "El promedio de calificación de la serie " << nombreSerie << " es: " << promedio << std::endl;
     } else {
-        std::cout << "No se encontró la serie especificada.\n";
+        std::cout << "No se encontró la serie especificada por lo que se redirigirá al menú principal.\n";
     }
 }
 
+//Diseñar nuestro menú
 void mostrarMenu() {
     std::cout << "\n===== Menú =====\n"
               << "1. Mostrar los videos en general con una calificación mayor o igual a un valor tecleado por el usuario\n"
@@ -170,7 +230,6 @@ void mostrarMenu() {
               << "7. Salir\n"
               << "------------------------------------------\n" 
               << "Ingrese su opción: ";
-  
 }
 
 int main() {
@@ -190,6 +249,8 @@ int main() {
     std::string valor;
     std::string genero;
     std::string nombreSerie;
+
+    bool opcionValida = false; // Variable para verificar si se ingresó una opción válida
 
     do {
         mostrarMenu();
@@ -228,14 +289,14 @@ int main() {
                 break;
             case 7:
                 std::cout << "\n¡Hasta luego!\n";
+                opcionValida = true; // La opción 7 es válida, el usuario puede salir del bucle
                 break;
             default:
                 std::cout << "Opción inválida. Intente nuevamente.\n";
                 break;
         }
-
         std::cout << std::endl;
-    } while (opcion != 7);
-  
+    } while (!opcionValida); // Continuar el bucle hasta que se ingrese una opción válida o se seleccione la opción 7
+
     return 0;
 }
